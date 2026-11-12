@@ -15,6 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MESURE = "departemental_prélèvements_totaux"
+# Noms affichés (clé = valeur du champ "espece" dans l'export)
+LABELS = {"cerf elaphe": "cerf"}
 
 
 def main():
@@ -39,7 +41,7 @@ def main():
     for r in rows:
         code = str(r["departement"]).zfill(2)  # garde les zéros initiaux ("01")
         v = r.get(MESURE)
-        arr = especes.setdefault(r["espece"], {}).setdefault(code, [None] * n)
+        arr = especes.setdefault(LABELS.get(r["espece"], r["espece"]), {}).setdefault(code, [None] * n)
         arr[r["annee"] - y0] = v
 
     out = {
