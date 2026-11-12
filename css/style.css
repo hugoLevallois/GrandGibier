@@ -174,3 +174,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .note:empty { display: none; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .75rem; color: var(--muted); margin-top: 4px; text-transform: capitalize; }
 .chart-legend i { display: inline-block; width: 10px; height: 3px; margin-right: 4px; vertical-align: middle; }
+
+.map-field { margin-top: 12px; }
+.map-field select { width: 100%; }
+.legend-title { text-transform: capitalize; }
