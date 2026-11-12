@@ -9,6 +9,8 @@
   --nodata: #cfcbc0;
   --dep-stroke: #ffffff;
   --shadow: 0 1px 3px rgba(0, 0, 0, .08);
+  --sp-0: #b5361d; --sp-1: #1f6f8b; --sp-2: #5b8c2a;
+  --sp-3: #8e5ea2; --sp-4: #c98a00; --sp-5: #4a4a48;
 }
 
 :root[data-theme="dark"] {
@@ -22,6 +24,8 @@
   --nodata: #2a2d33;
   --dep-stroke: #0d0f12;
   --shadow: 0 1px 3px rgba(0, 0, 0, .5);
+  --sp-0: #ff8a5c; --sp-1: #5ec2e0; --sp-2: #9bd35a;
+  --sp-3: #c79be0; --sp-4: #f2c14e; --sp-5: #c9c9c4;
 }
 
 * { box-sizing: border-box; }
@@ -153,3 +157,20 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   .topbar, .timeline, .credits { padding-left: 12px; padding-right: 12px; }
   #map { height: 55vh; }
 }
+
+.species-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.sp-chip {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 12px 5px 8px; font-size: .85rem; text-transform: capitalize;
+  background: var(--surface); user-select: none;
+}
+.sp-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.sp-chip i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--c); background: transparent; }
+.sp-chip:has(input:checked) { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
+.sp-chip:has(input:checked) i { background: var(--c); }
+.sp-chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { margin-top: 8px; }
+.note:empty { display: none; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .75rem; color: var(--muted); margin-top: 4px; text-transform: capitalize; }
+.chart-legend i { display: inline-block; width: 10px; height: 3px; margin-right: 4px; vertical-align: middle; }
