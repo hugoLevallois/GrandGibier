@@ -21,24 +21,23 @@
     document.getElementById("legend-max").textContent = nf.format(Math.round(maxValue));
   }
 
-  /* Courbe d'évolution.
-     series : tableau aligné sur `years` (null = pas de donnée)
-     onYear(i) : appelé quand on survole la courbe */
-  function drawLine(container, years, series, yearIndex, onYear) {
-    const W = 420, H = 210, m = { top: 12, right: 12, bottom: 24, left: 42 };
+  /* Courbes d'évolution (une par espèce).
+     seriesList : [{name, color, values}] ; values alignées sur `years` (null = pas de donnée)
+     onYear(i) : appelé quand on survole le graphique */
+  function drawLine(container, years, seriesList, yearIndex, onYear) {
+    const W = 420, H = 210, m = { top: 12, right: 12, bottom: 24, left: 46 };
     const root = d3.select(container);
     root.selectAll("*").remove();
 
     const svg = root.append("svg").attr("viewBox", `0 0 ${W} ${H}`);
     const x = d3.scaleLinear([years[0], years[years.length - 1]], [m.left, W - m.right]);
-    const maxY = d3.max(series, (d) => d) || 1;
+    const maxY = d3.max(seriesList, (s) => d3.max(s.values)) || 1;
     const y = d3.scaleLinear([0, maxY], [H - m.bottom, m.top]).nice();
 
     svg.append("g").attr("class", "grid")
       .attr("transform", `translate(${m.left},0)`)
       .call(d3.axisLeft(y).ticks(4).tickSize(-(W - m.left - m.right)).tickFormat(""))
       .call((g) => g.select(".domain").remove());
-
     svg.append("g").attr("class", "axis")
       .attr("transform", `translate(0,${H - m.bottom})`)
       .call(d3.axisBottom(x).ticks(6).tickFormat(d3.format("d")));
@@ -47,28 +46,21 @@
       .call(d3.axisLeft(y).ticks(4).tickFormat((d) => nf.format(d)))
       .call((g) => g.select(".domain").remove());
 
-    const defined = (d, i) => d !== null && d !== undefined;
-    const pts = series.map((v, i) => ({ v, year: years[i] }));
-
-    svg.append("path").datum(pts)
-      .attr("class", "area")
-      .attr("d", d3.area().defined((d) => d.v != null)
-        .x((d) => x(d.year)).y0(y(0)).y1((d) => y(d.v)));
-    svg.append("path").datum(pts)
-      .attr("class", "line")
-      .attr("d", d3.line().defined((d) => d.v != null)
-        .x((d) => x(d.year)).y((d) => y(d.v)));
-
-    // Repère de l'année courante
+    const line = d3.line().defined((d) => d.v != null).x((d) => x(d.year)).y((d) => y(d.v));
     const cx = x(years[yearIndex]);
     svg.append("line").attr("class", "marker")
       .attr("x1", cx).attr("x2", cx).attr("y1", m.top).attr("y2", H - m.bottom);
-    if (series[yearIndex] != null) {
-      svg.append("circle").attr("class", "dot")
-        .attr("cx", cx).attr("cy", y(series[yearIndex])).attr("r", 4.5);
-    }
 
-    // Survol / toucher : change l'année
+    seriesList.forEach((s) => {
+      const pts = s.values.map((v, i) => ({ v, year: years[i] }));
+      svg.append("path").datum(pts).attr("class", "line")
+        .style("stroke", s.color).attr("d", line);
+      if (s.values[yearIndex] != null) {
+        svg.append("circle").attr("class", "dot").style("fill", s.color)
+          .attr("cx", cx).attr("cy", y(s.values[yearIndex])).attr("r", 4.5);
+      }
+    });
+
     svg.append("rect")
       .attr("x", m.left).attr("y", m.top)
       .attr("width", W - m.left - m.right).attr("height", H - m.top - m.bottom)

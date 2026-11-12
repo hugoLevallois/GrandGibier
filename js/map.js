@@ -1,4 +1,4 @@
-/* map.js — carte Leaflet, état partagé (année, département, espèce), animation. */
+/* map.js — carte Leaflet, état partagé (années, départements, espèces cochées), animation. */
 (function () {
   const { nf, makeColorScale, updateLegend, drawLine } = Charts;
 
@@ -7,31 +7,46 @@
     "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson";
   const DATA_URL = "data/prelevements.json";
 
-  const state = { species: null, yearIndex: 0, dep: null, playing: false, timer: null };
-  let DATA, map, layer, scale, maxValue;
+  // selected : espèces cochées (la carte affiche leur somme par département)
+  const state = { selected: new Set(), yearIndex: 0, dep: null, playing: false, timer: null };
+  let DATA, map, layer, scale, maxValue, ALL = [];
   const layers = {};   // code -> couche Leaflet
   const names = {};    // code -> nom
 
   const $ = (id) => document.getElementById(id);
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const theme = () => document.documentElement.getAttribute("data-theme") || "light";
+  const colorOf = (sp) => css("--sp-" + (ALL.indexOf(sp) % 6));
 
-  const speciesData = () => DATA.especes[state.species];
-  const valueOf = (code, i = state.yearIndex) => {
-    const s = speciesData()[code];
-    return s ? s[i] : null;
-  };
-  const nationalSeries = () => {
-    const n = DATA.years.length;
-    return Array.from({ length: n }, (_, i) => {
+  const hasDeptData = (sp) => !!DATA.especes[sp];
+  const selectedDept = () => [...state.selected].filter(hasDeptData);
+  const nulls = () => DATA.years.map(() => null);
+
+  // Somme de plusieurs séries ; null si aucune valeur à cette année
+  function sumSeries(list) {
+    return DATA.years.map((_, i) => {
       let sum = 0, any = false;
-      for (const code in speciesData()) {
-        const v = speciesData()[code][i];
-        if (v != null) { sum += v; any = true; }
-      }
+      for (const s of list) { const v = s[i]; if (v != null) { sum += v; any = true; } }
       return any ? sum : null;
     });
-  };
+  }
+
+  // Valeur d'un département pour les espèces cochées
+  function valueOf(code, i = state.yearIndex) {
+    let sum = 0, any = false;
+    for (const sp of selectedDept()) {
+      const s = DATA.especes[sp][code];
+      const v = s ? s[i] : null;
+      if (v != null) { sum += v; any = true; }
+    }
+    return any ? sum : null;
+  }
+
+  // Série nationale d'une espèce (mouflon : fournie ; autres : somme des départements)
+  function nationalSeries(sp) {
+    if (DATA.nationales[sp]) return DATA.nationales[sp];
+    return sumSeries(Object.values(DATA.especes[sp]));
+  }
 
   async function fetchJSON(url) {
     const r = await fetch(url);
@@ -61,9 +76,14 @@
   function recomputeScale() {
     // Échelle fixe sur toutes les années, pour que les couleurs soient comparables
     maxValue = 0;
-    for (const code in speciesData()) {
-      for (const v of speciesData()[code]) if (v != null && v > maxValue) maxValue = v;
-    }
+    const codes = new Set();
+    selectedDept().forEach((sp) => Object.keys(DATA.especes[sp]).forEach((c) => codes.add(c)));
+    codes.forEach((code) => {
+      DATA.years.forEach((_, i) => {
+        const v = valueOf(code, i);
+        if (v != null && v > maxValue) maxValue = v;
+      });
+    });
     scale = makeColorScale(maxValue, theme());
     updateLegend(scale, maxValue);
   }
@@ -76,17 +96,45 @@
   function renderPanel() {
     const years = DATA.years;
     const year = years[state.yearIndex];
-    const series = state.dep ? (speciesData()[state.dep] || years.map(() => null)) : nationalSeries();
-    const v = series[state.yearIndex];
+    const picked = [...state.selected];
+
+    // Séries du graphique : une courbe par espèce cochée
+    const list = picked.map((sp) => ({
+      name: sp,
+      color: colorOf(sp),
+      values: state.dep
+        ? (hasDeptData(sp) ? (DATA.especes[sp][state.dep] || nulls()) : nulls())
+        : nationalSeries(sp),
+    }));
+    const total = sumSeries(list.map((s) => s.values))[state.yearIndex];
 
     $("chart-title").textContent = state.dep ? `${names[state.dep]} (${state.dep})` : "France entière";
     $("reset").hidden = !state.dep;
-    $("big-number").textContent = v == null ? "Pas de donnée" : nf.format(v);
-    $("big-caption").textContent = `prélèvements en ${year}`;
-    drawLine($("chart"), years, series, state.yearIndex, setYear);
+    $("big-number").textContent = total == null ? "Pas de donnée" : nf.format(total);
+    $("big-caption").textContent =
+      `prélèvements en ${year} · ${picked.join(" + ")}`;
+    drawLine($("chart"), years, list, state.yearIndex, setYear);
 
-    // Top 10
-    const rows = Object.keys(speciesData())
+    // Légende du graphique
+    const lg = document.createElement("div");
+    lg.className = "chart-legend";
+    list.forEach((s) => {
+      const span = document.createElement("span");
+      span.innerHTML = `<i style="background:${s.color}"></i>${s.name}`;
+      lg.appendChild(span);
+    });
+    $("chart").appendChild(lg);
+
+    const natOnly = picked.filter((sp) => !hasDeptData(sp));
+    $("chart-note").textContent = state.dep && natOnly.length
+      ? `${natOnly.join(", ")} : données nationales uniquement, pas de détail par département.`
+      : "";
+    $("species-note").textContent = natOnly.length
+      ? `${natOnly.join(", ")} : données nationales uniquement. Visible dans le graphique « France entière », absent de la carte.`
+      : "";
+
+    // Top 10 (espèces cochées avec données départementales)
+    const rows = Object.keys(names)
       .map((code) => ({ code, v: valueOf(code) }))
       .filter((d) => d.v != null && d.v > 0)
       .sort((a, b) => b.v - a.v)
@@ -123,10 +171,25 @@
     renderAll();
   }
 
-  function setSpecies(name) {
-    state.species = name;
-    recomputeScale();
-    renderAll();
+  function buildSpeciesList() {
+    const box = $("species-list");
+    box.innerHTML = "";
+    ALL.forEach((sp) => {
+      const label = document.createElement("label");
+      label.className = "sp-chip";
+      label.style.setProperty("--c", colorOf(sp));
+      label.innerHTML = `<input type="checkbox" value="${sp}"><i></i>${sp}`;
+      const input = label.querySelector("input");
+      input.checked = state.selected.has(sp);
+      input.addEventListener("change", () => {
+        if (input.checked) state.selected.add(sp);
+        else if (state.selected.size > 1) state.selected.delete(sp);
+        else input.checked = true;   // garde au moins une espèce
+        recomputeScale();
+        renderAll();
+      });
+      box.appendChild(label);
+    });
   }
 
   function togglePlay() {
@@ -145,6 +208,7 @@
   function setTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
     try { localStorage.setItem("theme", t); } catch (e) {}
+    buildSpeciesList();   // les couleurs d'espèces dépendent du thème
     recomputeScale();
     renderAll();
   }
@@ -154,19 +218,16 @@
   async function init() {
     const [geo, data] = await Promise.all([loadGeo(), fetchJSON(DATA_URL)]);
     DATA = data;
+    DATA.nationales = DATA.nationales || {};
+    ALL = [...Object.keys(DATA.especes), ...Object.keys(DATA.nationales)].sort();
 
     // Métropole uniquement (les codes 97x sont les DOM)
     const features = geo.features.filter((f) => !String(f.properties.code).startsWith("97"));
     features.forEach((f) => { names[f.properties.code] = f.properties.nom; });
 
-    // Sélecteur d'espèce
-    const sel = $("species");
-    Object.keys(DATA.especes).forEach((name) => {
-      const o = document.createElement("option");
-      o.value = name; o.textContent = name;
-      sel.appendChild(o);
-    });
-    sel.addEventListener("change", () => setSpecies(sel.value));
+    // Espèce cochée par défaut : la première avec données départementales
+    state.selected.add(Object.keys(DATA.especes)[0]);
+    buildSpeciesList();
 
     // Curseur d'années
     const n = DATA.years.length;
@@ -197,7 +258,6 @@
     map.fitBounds(layer.getBounds(), { padding: [8, 8] });
 
     state.yearIndex = n - 1;
-    state.species = Object.keys(DATA.especes)[0];
     recomputeScale();
     renderAll();
 
