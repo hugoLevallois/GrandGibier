@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tableaux de chasse du grand gibier en France</title>
+  <meta name="description" content="Évolution des prélèvements de grand gibier par département, de 1973 à aujourd'hui.">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Applique le thème avant le rendu pour éviter un flash
+    (function () {
+      try {
+        var t = localStorage.getItem("theme") ||
+          (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Tableaux de chasse du grand gibier</h1>
+      <p class="subtitle">Prélèvements par département, <span id="range">1973–2025</span></p>
+    </div>
+    <div class="controls">
+      <label class="field">
+        <span>Espèce</span>
+        <select id="species"></select>
+      </label>
+      <button id="theme" class="icon-btn" type="button" aria-label="Changer de thème" title="Changer de thème">
+        <span class="sun">☀</span><span class="moon">☾</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-wrap">
+      <div id="map" aria-label="Carte des départements"></div>
+      <div id="legend" class="legend">
+        <div class="legend-title">Prélèvements</div>
+        <div id="legend-bar" class="legend-bar"></div>
+        <div class="legend-labels"><span id="legend-min">0</span><span id="legend-max"></span></div>
+        <div class="legend-nodata"><i></i> Pas de donnée</div>
+      </div>
+      <div class="year-badge" id="year-badge">2025</div>
+    </section>
+
+    <aside class="panel">
+      <div class="card">
+        <div class="card-head">
+          <h2 id="chart-title">France entière</h2>
+          <button id="reset" class="link-btn" type="button" hidden>← France entière</button>
+        </div>
+        <p class="big" id="big-number">–</p>
+        <p class="muted" id="big-caption"></p>
+        <div id="chart" class="chart"></div>
+      </div>
+
+      <div class="card">
+        <h2>Top 10 des départements <span id="top-year" class="muted"></span></h2>
+        <table class="top">
+          <thead><tr><th>#</th><th>Département</th><th class="num">Prélèvements</th></tr></thead>
+          <tbody id="top-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="timeline">
+    <button id="play" class="play" type="button" aria-label="Lecture">▶</button>
+    <input id="slider" type="range" min="0" max="0" step="1" value="0" aria-label="Année">
+    <div class="ticks"><span id="year-min"></span><span id="year-max"></span></div>
+  </footer>
+
+  <p class="credits">
+    Données : tableaux de chasse départementaux du grand gibier (OFB / FNC), via
+    <a href="https://www.data.gouv.fr/datasets/evolution-des-tableaux-de-chasse-departementaux-du-grand-gibier-en-france-donnees-depuis-1973-2" target="_blank" rel="noopener">data.gouv.fr</a>.
+    Fonds de carte : <a href="https://github.com/gregoiredavid/france-geojson" target="_blank" rel="noopener">france-geojson</a>.
+  </p>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/map.js"></script>
+</body>
+</html>
