@@ -35,7 +35,7 @@
     <section class="map-wrap">
       <div id="map" aria-label="Carte des départements"></div>
       <div id="legend" class="legend">
-        <div class="legend-title">Prélèvements</div>
+        <div class="legend-title" id="legend-title">Prélèvements</div>
         <div id="legend-bar" class="legend-bar"></div>
         <div class="legend-labels"><span id="legend-min">0</span><span id="legend-max"></span></div>
         <div class="legend-nodata"><i></i> Pas de donnée</div>
@@ -46,7 +46,12 @@
     <aside class="panel">
       <div class="card">
         <h2>Espèces</h2>
-        <div id="species-list" class="species-list" role="group" aria-label="Espèces affichées"></div>
+        <p class="muted note">Cochez plusieurs espèces pour les comparer dans le graphique.</p>
+        <div id="species-list" class="species-list" role="group" aria-label="Espèces comparées dans le graphique"></div>
+        <label class="field map-field">
+          <span>Espèce affichée sur la carte</span>
+          <select id="map-species"></select>
+        </label>
         <p id="species-note" class="muted note"></p>
       </div>
 
