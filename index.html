@@ -22,13 +22,9 @@
   <header class="topbar">
     <div>
       <h1>Tableaux de chasse du grand gibier</h1>
-      <p class="subtitle">Prélèvements par département, <span id="range">1973–2025</span></p>
+      <p class="subtitle">Prélèvements par département, une ou plusieurs espèces, <span id="range">1973–2025</span></p>
     </div>
     <div class="controls">
-      <label class="field">
-        <span>Espèce</span>
-        <select id="species"></select>
-      </label>
       <button id="theme" class="icon-btn" type="button" aria-label="Changer de thème" title="Changer de thème">
         <span class="sun">☀</span><span class="moon">☾</span>
       </button>
@@ -49,6 +45,12 @@
 
     <aside class="panel">
       <div class="card">
+        <h2>Espèces</h2>
+        <div id="species-list" class="species-list" role="group" aria-label="Espèces affichées"></div>
+        <p id="species-note" class="muted note"></p>
+      </div>
+
+      <div class="card">
         <div class="card-head">
           <h2 id="chart-title">France entière</h2>
           <button id="reset" class="link-btn" type="button" hidden>← France entière</button>
@@ -56,6 +58,7 @@
         <p class="big" id="big-number">–</p>
         <p class="muted" id="big-caption"></p>
         <div id="chart" class="chart"></div>
+        <p id="chart-note" class="muted note"></p>
       </div>
 
       <div class="card">

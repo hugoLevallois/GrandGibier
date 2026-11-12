@@ -11,12 +11,13 @@ Carte interactive (Leaflet + D3) des prélèvements de grand gibier par départe
 ## Structure
 - `index.html`, `css/style.css`
 - `js/charts.js` (D3 : échelle, courbe, légende), `js/map.js` (Leaflet + état partagé)
-- `data/raw/` export data.gouv.fr ; `data/prelevements.json` format compact `especes[espèce][département] = [valeur par année]` (null = pas de donnée)
+- `data/raw/cerf.json` : export data.gouv.fr ; `data/prelevements.json` format compact `especes[espèce][département] = [valeur par année]` (null = pas de donnée) et `nationales[espèce] = [valeur par année]`
 
 ## Limites des données
-- Seule l'espèce « cerf élaphe » est présente dans l'export actuel (ajouter d'autres exports dans `data/raw/`).
+- Espèces : cerf, chamois, chevreuil, isard, sanglier (départemental) et mouflon (national uniquement : absent de la carte, visible dans la courbe « France entière »). On peut en cocher plusieurs : la carte affiche leur somme par département, le graphique une courbe par espèce.
+- Pour ajouter une espèce : déposer son export dans `data/raw/` puis relancer `build_data.py`.
 - Corse (2A/2B) absente ; beaucoup de départements manquent les premières années (gris = pas de donnée, distinct de 0).
-- Mesure : `departemental_prélèvements_totaux`. Valeur étrange non corrigée : 1999, département 45 (réalisations > attributions).
+- Mesure : prélèvements totaux. Valeur étrange non corrigée : 1999, département 45 (réalisations > attributions).
 - Échelle de couleurs fixe sur toutes les années (racine carrée) pour comparer les années entre elles.
 
 Source : data.gouv.fr — Évolution des tableaux de chasse départementaux du grand gibier. Fond : gregoiredavid/france-geojson.
