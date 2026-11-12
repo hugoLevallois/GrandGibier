@@ -5,7 +5,7 @@
 
   // Interpolateurs par thème (la valeur 0 reste lisible sur chaque fond)
   const interpolators = {
-    light: d3.interpolateYlOrRd,
+    light: (t) => d3.interpolateYlOrRd(0.15 + 0.85 * t),  // jamais quasi-blanc : distinct du gris
     dark: (t) => d3.interpolateInferno(0.12 + 0.88 * t),
   };
 
@@ -73,5 +73,41 @@
       });
   }
 
-  window.Charts = { nf, makeColorScale, updateLegend, drawLine };
+  /* Barres des années : une barre par année (total national de l'espèce affichée sur la carte),
+     colorée avec la même échelle que la carte. Clic / survol = changer d'année. */
+  function drawYearBars(container, years, totals, yearIndex, scale, onYear) {
+    const W = 320, H = 150, m = { top: 6, right: 4, bottom: 18, left: 4 };
+    const root = d3.select(container);
+    root.selectAll("*").remove();
+    const svg = root.append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+    const x = d3.scaleBand(years, [m.left, W - m.right]).paddingInner(0.12);
+    const maxT = d3.max(totals) || 1;
+    const y = d3.scaleLinear([0, maxT], [H - m.bottom, m.top]);
+
+    svg.selectAll("rect.bar").data(totals.map((v, i) => ({ v, i }))).join("rect")
+      .attr("class", (d) => "bar" + (d.i === yearIndex ? " current" : ""))
+      .attr("x", (d) => x(years[d.i]))
+      .attr("width", x.bandwidth())
+      .attr("y", (d) => (d.v == null ? H - m.bottom - 1 : y(d.v)))
+      .attr("height", (d) => (d.v == null ? 1 : H - m.bottom - y(d.v)))
+      .style("fill", (d) => (d.v == null ? "var(--nodata)" : scale(d.v)));
+
+    svg.append("g").attr("class", "axis")
+      .attr("transform", `translate(0,${H - m.bottom})`)
+      .call(d3.axisBottom(x).tickValues(years.filter((yr) => yr % 10 === 0 || yr === years[years.length - 1]))
+        .tickSize(3).tickFormat(d3.format("d")))
+      .call((g) => g.select(".domain").remove());
+
+    const pick = (event) => {
+      const [px] = d3.pointer(event, svg.node());
+      const i = Math.floor((px - m.left) / (x.step()));
+      if (onYear) onYear(Math.min(years.length - 1, Math.max(0, i)));
+    };
+    svg.append("rect").attr("width", W).attr("height", H).attr("fill", "transparent")
+      .style("cursor", "pointer")
+      .on("pointerdown", pick)
+      .on("pointermove", (event) => { if (event.buttons === 1 || event.pointerType === "mouse") pick(event); });
+  }
+
+  window.Charts = { nf, makeColorScale, updateLegend, drawLine, drawYearBars };
 })();

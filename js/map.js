@@ -1,6 +1,6 @@
 /* map.js — carte Leaflet, état partagé (années, départements, espèces cochées), animation. */
 (function () {
-  const { nf, makeColorScale, updateLegend, drawLine } = Charts;
+  const { nf, makeColorScale, updateLegend, drawLine, drawYearBars } = Charts;
 
   const GEO_LOCAL = "data/departements.geojson";
   const GEO_REMOTE =
@@ -63,7 +63,7 @@
       const v = s ? s[i] : null;
       if (v != null) { sum += v; any = true; }
     }
-    return any ? sum : null;
+    return any && sum > 0 ? sum : null;   // 0 et « pas de donnée » sont fusionnés
   }
 
   // Série nationale d'une espèce (mouflon : fournie ; autres : somme des départements)
@@ -176,10 +176,22 @@
     });
   }
 
+  function renderBars() {
+    const codes = Object.keys(names);
+    const totals = DATA.years.map((_, i) => {
+      let sum = 0;
+      codes.forEach((c) => { const v = valueOf(c, i); if (v != null) sum += v; });
+      return sum > 0 ? sum : null;
+    });
+    drawYearBars($("years-chart"), DATA.years, totals, state.yearIndex, scale, setYear);
+    $("years-title").textContent = "Total France · " + mapLabel();
+  }
+
   function renderAll() {
     $("year-badge").textContent = DATA.years[state.yearIndex];
     $("slider").value = state.yearIndex;
     renderMap();
+    renderBars();
     renderPanel();
   }
 
@@ -239,6 +251,14 @@
     renderAll();
   }
 
+  // Cadre la France à droite, en laissant la colonne de gauche aux barres des années
+  function fitFrance() {
+    map.invalidateSize();
+    const wide = window.innerWidth > 900;
+    const left = wide ? $("years").offsetWidth + 24 : 8;
+    map.fitBounds(layer.getBounds(), { paddingTopLeft: [left, 8], paddingBottomRight: [8, 8], animate: false });
+  }
+
   /* ---------- Initialisation ---------- */
 
   async function init() {
@@ -271,7 +291,12 @@
     $("range").textContent = `${DATA.years[0]}–${DATA.years[n - 1]}`;
 
     // Carte (sans fond de tuiles : départements sur fond uni)
-    map = L.map("map", { zoomSnap: 0.25, minZoom: 4, zoomControl: true, attributionControl: true });
+    // Carte figée : pas de déplacement ni de zoom (la France ne peut plus sortir du cadre)
+    map = L.map("map", {
+      zoomSnap: 0.1, zoomControl: false, attributionControl: true,
+      dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+      boxZoom: false, keyboard: false, touchZoom: false, tap: false,
+    });
     map.attributionControl.setPrefix("Leaflet");
     layer = L.geoJSON({ type: "FeatureCollection", features }, {
       style: () => ({}),
@@ -281,13 +306,13 @@
           const code = f.properties.code;
           const v = valueOf(code);
           return `<strong>${f.properties.nom}</strong><br>` +
-            (v == null ? "Pas de donnée" : `${nf.format(v)} prélèvements`) +
+            (v == null ? "0 ou pas de donnée" : `${nf.format(v)} prélèvements`) +
             ` en ${DATA.years[state.yearIndex]}`;
         }, { sticky: true, className: "dep-tip" });
         l.on("click", () => selectDep(f.properties.code));
       },
     }).addTo(map);
-    map.fitBounds(layer.getBounds(), { padding: [8, 8] });
+    fitFrance();
 
     state.yearIndex = n - 1;
     recomputeScale();
@@ -296,7 +321,7 @@
     $("theme").addEventListener("click", () => setTheme(theme() === "dark" ? "light" : "dark"));
     $("play").addEventListener("click", togglePlay);
     $("reset").addEventListener("click", () => { state.dep = null; renderAll(); });
-    window.addEventListener("resize", () => map.invalidateSize());
+    window.addEventListener("resize", fitFrance);
   }
 
   init().catch((e) => {
