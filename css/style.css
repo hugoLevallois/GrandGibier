@@ -78,14 +78,15 @@ select {
   overflow: hidden;
   background: var(--map-bg);
   box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
 }
-#map { height: min(72vh, 680px); background: var(--map-bg); }
+#map { flex: 1; min-height: min(72vh, 680px); background: var(--map-bg); }
 .leaflet-container { background: var(--map-bg); font-family: inherit; }
 .leaflet-control-attribution { background: transparent !important; color: var(--muted); }
 .leaflet-control-zoom a { background: var(--surface); color: var(--text); border-color: var(--border); }
 
 .year-badge {
-  position: absolute; left: 16px; bottom: 8px; z-index: 500;
+  position: absolute; left: 16px; top: 8px; z-index: 500;
   font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 800;
   color: var(--text); opacity: .16; pointer-events: none; line-height: 1;
 }
@@ -155,7 +156,6 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; padding: 8px 12px; }
   .topbar, .timeline, .credits { padding-left: 12px; padding-right: 12px; }
-  #map { height: 55vh; }
 }
 
 .species-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -178,3 +178,17 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .map-field { margin-top: 12px; }
 .map-field select { width: 100%; }
 .legend-title { text-transform: capitalize; }
+
+.years {
+  position: absolute; left: 12px; bottom: 12px; z-index: 500;
+  width: min(320px, 34%);
+}
+.years-title { font-size: .75rem; color: var(--muted); margin-bottom: 2px; text-transform: capitalize; }
+.years-chart svg { width: 100%; height: auto; display: block; touch-action: none; }
+.years-chart .bar { stroke: none; }
+.years-chart .bar.current { stroke: var(--text); stroke-width: 1.5; }
+@media (max-width: 900px) {
+  .year-badge { top: 4px; }
+  .years { position: static; width: auto; padding: 8px 12px 12px; order: 2; }
+  #map { min-height: 55vh; flex: none; }
+}
