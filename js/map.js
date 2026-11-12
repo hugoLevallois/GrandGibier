@@ -8,7 +8,7 @@
   const DATA_URL = "data/prelevements.json";
 
   // selected : espèces cochées (la carte affiche leur somme par département)
-  const state = { selected: new Set(), yearIndex: 0, dep: null, playing: false, timer: null };
+  const state = { selected: new Set(), mapMode: null, yearIndex: 0, dep: null, playing: false, timer: null };
   let DATA, map, layer, scale, maxValue, ALL = [];
   const layers = {};   // code -> couche Leaflet
   const names = {};    // code -> nom
@@ -20,6 +20,30 @@
 
   const hasDeptData = (sp) => !!DATA.especes[sp];
   const selectedDept = () => [...state.selected].filter(hasDeptData);
+  // Espèce(s) colorant la carte : une seule, ou la somme des cochées
+  function mapSpecies() {
+    const d = selectedDept();
+    if (state.mapMode === "__sum" && d.length > 1) return d;
+    if (d.includes(state.mapMode)) return [state.mapMode];
+    return d.slice(0, 1);
+  }
+  const mapLabel = () => {
+    const m = mapSpecies();
+    return m.length > 1 ? "somme des espèces cochées" : (m[0] || "aucune donnée par département");
+  };
+
+  function syncMapSelect() {
+    const d = selectedDept();
+    const sel = $("map-species");
+    if (state.mapMode !== "__sum" && !d.includes(state.mapMode)) state.mapMode = d[0] || null;
+    if (state.mapMode === "__sum" && d.length < 2) state.mapMode = d[0] || null;
+    sel.innerHTML = "";
+    d.forEach((sp) => sel.add(new Option(sp, sp)));
+    if (d.length > 1) sel.add(new Option("Somme des espèces cochées", "__sum"));
+    sel.value = state.mapMode || "";
+    sel.disabled = d.length === 0;
+  }
+
   const nulls = () => DATA.years.map(() => null);
 
   // Somme de plusieurs séries ; null si aucune valeur à cette année
@@ -34,7 +58,7 @@
   // Valeur d'un département pour les espèces cochées
   function valueOf(code, i = state.yearIndex) {
     let sum = 0, any = false;
-    for (const sp of selectedDept()) {
+    for (const sp of mapSpecies()) {
       const s = DATA.especes[sp][code];
       const v = s ? s[i] : null;
       if (v != null) { sum += v; any = true; }
@@ -77,7 +101,7 @@
     // Échelle fixe sur toutes les années, pour que les couleurs soient comparables
     maxValue = 0;
     const codes = new Set();
-    selectedDept().forEach((sp) => Object.keys(DATA.especes[sp]).forEach((c) => codes.add(c)));
+    mapSpecies().forEach((sp) => Object.keys(DATA.especes[sp]).forEach((c) => codes.add(c)));
     codes.forEach((code) => {
       DATA.years.forEach((_, i) => {
         const v = valueOf(code, i);
@@ -86,6 +110,7 @@
     });
     scale = makeColorScale(maxValue, theme());
     updateLegend(scale, maxValue);
+    $("legend-title").textContent = "Carte : " + mapLabel();
   }
 
   function renderMap() {
@@ -139,7 +164,7 @@
       .filter((d) => d.v != null && d.v > 0)
       .sort((a, b) => b.v - a.v)
       .slice(0, 10);
-    $("top-year").textContent = `· ${year}`;
+    $("top-year").textContent = `· ${mapLabel()} · ${year}`;
     const tbody = $("top-body");
     tbody.innerHTML = "";
     rows.forEach((d, i) => {
@@ -185,6 +210,7 @@
         if (input.checked) state.selected.add(sp);
         else if (state.selected.size > 1) state.selected.delete(sp);
         else input.checked = true;   // garde au moins une espèce
+        syncMapSelect();
         recomputeScale();
         renderAll();
       });
@@ -228,6 +254,12 @@
     // Espèce cochée par défaut : la première avec données départementales
     state.selected.add(Object.keys(DATA.especes)[0]);
     buildSpeciesList();
+    syncMapSelect();
+    $("map-species").addEventListener("change", (e) => {
+      state.mapMode = e.target.value;
+      recomputeScale();
+      renderAll();
+    });
 
     // Curseur d'années
     const n = DATA.years.length;
