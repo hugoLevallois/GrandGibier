@@ -8,9 +8,9 @@ Usage :
 Par défaut : fusionne tous les .json de data/raw/ (un fichier par espèce) et écrit
 data/prelevements.json. Pour ajouter une espèce, déposez simplement son export dans data/raw/.
 
-Deux formats d'export sont gérés :
+ format d'export  géré :
   - départemental (champ "departement") -> especes[espèce][département] = [valeur par année]
-  - national uniquement (ex. mouflon)   -> nationales[espèce] = [valeur par année]
+
 """
 import json
 import sys
